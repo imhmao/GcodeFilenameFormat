@@ -242,13 +242,17 @@ class GcodeFilenameFormat(OutputDevice, Extension):
     # Perform lookup and replacement of print setting values in filename format
     def parseFilenameFormat(self, filename_format, file_name, application, global_stack):
 
-        short = 2
+        short = 0
         # 设置了 8.3 格式 [8.3.2]
-        if filename_format[0:4] == "[8.3":
+        ma = re.match("^\[8\.3\.?(\d?)\]",filename_format)
+        if ma != None:
             self._dos = True
-            #QMessageBox.information(None,'test',filename_format[5:6])
-            short = int(filename_format[5:6])
-            filename_format = filename_format[7:]
+            #QMessageBox.information(None,'test',ma.group(1))
+            try:
+                short = int(ma.group(1))
+            except:
+                short = 0
+            filename_format = filename_format[ma.span()[1]:]
         else:
             self._dos = False
 
@@ -308,9 +312,14 @@ class GcodeFilenameFormat(OutputDevice, Extension):
         print_settings["cura_version"] = cura_version
 
         for setting, value in print_settings.items():
+            
             val = str(value)
+            
             if self._dos:
-                val = val.replace(" ", "").replace(".", "")[0:short]
+                val = val.replace(" ", "").replace(".", "")         
+                if short > 0:
+                    val = val[0:short]
+
             filename_format = filename_format.replace(
                 "[" + setting + "]", val)
 
@@ -318,6 +327,7 @@ class GcodeFilenameFormat(OutputDevice, Extension):
             '[^A-Za-z0-9.,_\-%°$£€#\[\]\(\)\|\+\'\" ]+', '', filename_format)
         Logger.log("d", "filename_format = %s", filename_format)
 
+        #QMessageBox.information(None,'test',filename_format)
         # 8.3 格式
         if self._dos:
             filename_format = filename_format[0:8]
